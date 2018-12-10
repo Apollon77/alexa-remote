@@ -13,6 +13,11 @@ const AlexaWsMqtt = require('./alexa-wsmqtt.js');
 
 const EventEmitter = require('events');
 
+function requireUncached(mod) {
+	delete require.cache[require.resolve(mod)];
+	return require(mod);
+}
+
 function _00(val) {
     let s = val.toString();
     while (s.length < 2) s = '0' + s;
@@ -603,12 +608,12 @@ class AlexaRemote extends EventEmitter {
     }
 
     generateCookie(email, password, callback) {
-        if (!this.alexaCookie) this.alexaCookie = require('alexa-cookie2');
+		if (!this.alexaCookie) this.alexaCookie = requireUncached('alexa-cookie2');
         this.alexaCookie.generateAlexaCookie(email, password, this._options, callback);
     }
 
     refreshCookie(callback) {
-        if (!this.alexaCookie) this.alexaCookie = require('alexa-cookie2');
+        if (!this.alexaCookie) this.alexaCookie = requireUncached('alexa-cookie2');
         this.alexaCookie.refreshAlexaCookie(this._options, callback);
     }
 
