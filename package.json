@@ -32,7 +32,7 @@
     "extend": "^3.0.2"
   },
   "devDependencies": {
-    "mocha": "^2.3.4",
+    "mocha": "^6.1.2",
     "chai": "^3.4.1"
   },
   "scripts": {
