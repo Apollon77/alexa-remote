@@ -28,7 +28,7 @@
     "alexa-cookie2": "^2.0.1",
     "https": "^1.0.0",
     "querystring": "^0.2.0",
-    "ws": "^6.1.2",
+    "ws": "^7.0.0",
     "extend": "^3.0.2"
   },
   "devDependencies": {
