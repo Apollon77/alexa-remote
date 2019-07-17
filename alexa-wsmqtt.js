@@ -94,7 +94,7 @@ class AlexaWsMqtt extends EventEmitter {
                 this.pingPongInterval = null;
             }
             if (this.pongTimeout) {
-                clearInterval(this.pongTimeout);
+                clearTimeout(this.pongTimeout);
                 this.pongTimeout = null;
             }
             if (code === 4001 && reason.startsWith('before - Could not find any')) { // code = 40001, reason = "before - Could not find any vali"
