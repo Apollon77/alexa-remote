@@ -870,10 +870,10 @@ class AlexaRemote extends EventEmitter {
         this.getList('TASK', options, (err, res) => {
             let ret = {};
             if (!err && res) {
-                ret.tasks = res;
+                ret.todo = res;
             }
             this.getList('SHOPPING_ITEM', options, (err, res) => {
-                ret.shoppingItems = res;
+                ret.shopping = res;
                 callback && callback(null, ret);
             });
         });
