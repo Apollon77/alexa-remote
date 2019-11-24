@@ -841,20 +841,21 @@ class AlexaRemote extends EventEmitter {
 
     getList(listType, options, callback) {
 		
-        // params
+        // get function params
         if (typeof options === 'function') {
             callback = options;
             options = {};
         }
 
+        // get params for request
         // send request
-        this.httpsGet (`
-            /api/todos?size=${options.size || 100}
-            &startTime=${options.startTime || ''}
-            &endTime=${options.endTime || ''}
-            &completed=${options.completed || false}
-            &type=${listType}
-            &_=%t`,
+        this.httpsGet ('/api/todos?1' +
+			'&size=' + (options.size || 100) +
+            '&startTime=' + (options.startTime || '') +
+            '&endTime=' + (options.endTime || '') +
+			(options.completed ? '&completed=' + options.completed : '') +
+            '&type=' + listType +
+            '&_=%t',
             (err, res) => callback && callback(err, res && res.values));
     }
 
