@@ -343,6 +343,9 @@ class AlexaRemote extends EventEmitter {
             this.emit('ws-unknown-message', incomingMsg);
         });
         this.alexaWsMqtt.on('command', (command, payload) => {
+			
+			this.emit('command', { 'command': command, 'payload': payload });
+			
             switch(command) {
                 case 'PUSH_DOPPLER_CONNECTION_CHANGE':
                     /*
@@ -611,10 +614,34 @@ class AlexaRemote extends EventEmitter {
                         this.emit('ws-device-activity', activity);
                     });
                     return;
-                case 'PUSH_TODO_CHANGE':
+				
+                case 'PUSH_TODO_CHANGE': // does not exist?
+                case 'PUSH_LIST_CHANGE': // does not exist?
                 case 'PUSH_LIST_ITEM_CHANGE':
-                case 'PUSH_LIST_CHANGE':
-
+					/*
+					{
+						destinationUserId:'A12XXXXXWISGT',
+						listId:'YW16bjEuYWNjb3VudC5BRzJGWEpGWE5DRDZNVzNRSUdFM0xLWkZCWFhRLVRBU0s=',
+						eventName:'itemCreated',
+						version:1,
+						listItemId:'c6852978-bb79-44dc-b7e5-8f5e577432cf'
+					}
+					*/
+					this.getLists((err, lists) => {
+						
+						this.emit('ws-todo-change', {
+							destinationUserId: payload.destinationUserId,
+							'_item': {
+								eventType: payload.eventName, // itemCreated, itemUpdated (including checked ToDo), itemDeleted
+								listId: payload.listId,
+								listItemVersion: payload.version,
+								listItemId: payload.listItemId
+							},
+							...lists
+						});
+					});
+                    return;
+					
                 case 'PUSH_MICROPHONE_STATE':
                 case 'PUSH_DELETE_DOPPLER_ACTIVITIES':
                     break;
@@ -812,18 +839,14 @@ class AlexaRemote extends EventEmitter {
         this.httpsGet (`/api/np/player?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}&screenWidth=1392&_=%t`, callback);
     }
 
-    getList(serialOrName, listType, options, callback) {
-
+    getList(listType, options, callback) {
+		
         // params
         if (typeof options === 'function') {
             callback = options;
             options = {};
         }
-        
-        // get device
-        let dev = this.find(serialOrName);
-        if (!dev) return callback && callback(new Error ('Unknown Device or Serial number', null));
-        
+
         // send request
         this.httpsGet (`
             /api/todos?size=${options.size || 100}
@@ -831,31 +854,25 @@ class AlexaRemote extends EventEmitter {
             &endTime=${options.endTime || ''}
             &completed=${options.completed || false}
             &type=${listType}
-            &deviceSerialNumber=${dev.serialNumber}
-            &deviceType=${dev.deviceType}
             &_=%t`,
-            callback);
+            (err, res) => callback && callback(err, res && res.values));
     }
 
-    getLists(serialOrName, options, callback) {
-        
+    getLists(options, callback) {
+		
         // params
         if (typeof options === 'function') {
             callback = options;
             options = {};
         }
-        
-        // get device
-        let dev = this.find(serialOrName);
-        if (!dev) return callback && callback(new Error ('Unknown Device or Serial number', null));
 
-        // get list
-        this.getList(dev, 'TASK', options, function(err, res) {
+        // get lists
+        this.getList('TASK', options, (err, res) => {
             let ret = {};
             if (!err && res) {
                 ret.tasks = res;
             }
-            this.getList(dev, 'SHOPPING_ITEM', options, function(err, res) {
+            this.getList('SHOPPING_ITEM', options, (err, res) => {
                 ret.shoppingItems = res;
                 callback && callback(null, ret);
             });
