@@ -813,13 +813,18 @@ class AlexaRemote extends EventEmitter {
     }
 
     getList(serialOrName, listType, options, callback) {
-        let dev = this.find(serialOrName);
-        if (!dev) return callback && callback(new Error ('Unknown Device or Serial number', null));
 
+        // params
         if (typeof options === 'function') {
             callback = options;
             options = {};
         }
+        
+        // get device
+        let dev = this.find(serialOrName);
+        if (!dev) return callback && callback(new Error ('Unknown Device or Serial number', null));
+        
+        // send request
         this.httpsGet (`
             /api/todos?size=${options.size || 100}
             &startTime=${options.startTime || ''}
@@ -833,9 +838,18 @@ class AlexaRemote extends EventEmitter {
     }
 
     getLists(serialOrName, options, callback) {
+        
+        // params
+        if (typeof options === 'function') {
+            callback = options;
+            options = {};
+        }
+        
+        // get device
         let dev = this.find(serialOrName);
         if (!dev) return callback && callback(new Error ('Unknown Device or Serial number', null));
 
+        // get list
         this.getList(dev, 'TASK', options, function(err, res) {
             let ret = {};
             if (!err && res) {
