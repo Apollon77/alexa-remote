@@ -160,7 +160,7 @@ class AlexaRemote extends EventEmitter {
                     clearTimeout(this.cookieRefreshTimeout);
                     this.cookieRefreshTimeout = null;
                 }
-                if (this._options.RefreshCookieInterval) {
+                if (this._options.refreshCookieInterval) {
                     this.cookieRefreshTimeout = setTimeout(() => {
                         this.cookieRefreshTimeout = null;
                         this._options.cookie = this.cookieData;
