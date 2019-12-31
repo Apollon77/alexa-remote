@@ -160,13 +160,13 @@ class AlexaRemote extends EventEmitter {
                     clearTimeout(this.cookieRefreshTimeout);
                     this.cookieRefreshTimeout = null;
                 }
-                if (this._options.cookieRefreshInterval) {
+                if (this._options.RefreshCookieInterval) {
                     this.cookieRefreshTimeout = setTimeout(() => {
                         this.cookieRefreshTimeout = null;
                         this._options.cookie = this.cookieData;
                         delete this._options.csrf;
                         this.init(this._options, callback);
-                    }, this._options.cookieRefreshInterval);
+                    }, this._options.refreshCookieInterval);
                 }
                 this.prepare(() => {
                     if (this._options.useWsMqtt) {
@@ -764,7 +764,7 @@ class AlexaRemote extends EventEmitter {
                 if (typeof callback === 'function') {
                     if (!body) { // Method 'DELETE' may return HTTP STATUS 200 without body
                         this._options.logger && this._options.logger('Alexa-Remote: Response: No body');
-                        return res.statusCode.toString().substr(0,1) == '2' ? callback(null, { 'success': true }) : callback(new Error('no body'), null);
+                        return res.statusCode.toString().substr(0,1) == '2' ? callback(null, { 'success': true }) : callback(new Error('no body and status code '+res.statusCode.toString()+'.  Headers: '+JSON.stringify(res.headers)), null);
                     }
 					
                     try {
