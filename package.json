@@ -30,7 +30,7 @@
     "querystring": "^0.2.0",
     "ws": "^7.2.3",
     "extend": "^3.0.2",
-    "uuid": "^7.0.2"
+    "uuid": "^8.0.0"
   },
   "devDependencies": {},
   "scripts": {
