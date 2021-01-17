@@ -162,6 +162,7 @@ class AlexaRemote extends EventEmitter {
                     delete this._options.csrf;
                     delete this._options.localCookie;
                     delete this._options.macDms;
+                    delete this.cookie;
                     return this.init(this._options, callback);
                 }
                 this.lastAuthCheck = new Date().getTime();
