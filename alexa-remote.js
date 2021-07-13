@@ -1761,6 +1761,20 @@ class AlexaRemote extends EventEmitter {
                 delete seqNode.operationPayload.deviceSerialNumber;
                 delete seqNode.operationPayload.locale;
                 break;
+
+            case 'allStop': // JP : possible to stop all devices.
+                seqNode.type = 'Alexa.DeviceControls.Stop';
+                seqNode.operationPayload.devices = [
+                    {
+                        "deviceSerialNumber": "ALEXA_CURRENT_DSN",
+                        "deviceType": "ALEXA_CURRENT_DEVICE_TYPE"
+                    }
+                ];
+                seqNode.operationPayload.isAssociatedDevice = false;
+                delete seqNode.operationPayload.deviceType;
+                delete seqNode.operationPayload.deviceSerialNumber;
+                delete seqNode.operationPayload.locale;
+                break;
             case 'speak':
                 seqNode.type = 'Alexa.Speak';
                 if (typeof value !== 'string') value = String(value);
