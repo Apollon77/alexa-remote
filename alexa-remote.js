@@ -918,6 +918,11 @@ class AlexaRemote extends EventEmitter {
         });
     }
 
+    checkConnection(callback) {
+        if (!this.alexaWsMqtt || !this.alexaWsMqtt.connectionActive) {
+            this.initWsMqttConnection();
+        }
+    }
 
     getDevices(callback) {
         this.httpsGet ('/api/devices-v2/device?cached=true&_=%t', callback);
