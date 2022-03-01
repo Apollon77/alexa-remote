@@ -39,7 +39,7 @@
   "devDependencies": {
     "@alcalzone/release-script": "^3.5.2",
     "@alcalzone/release-script-plugin-license": "^3.5.0",
-    "eslint": "^8.9.0"
+    "eslint": "^8.10.0"
   },
   "scripts": {
     "test": "node node_modules/mocha/bin/mocha",
