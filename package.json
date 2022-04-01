@@ -37,7 +37,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@alcalzone/release-script": "^3.5.2",
+    "@alcalzone/release-script": "^3.5.6",
     "@alcalzone/release-script-plugin-license": "^3.5.0",
     "eslint": "^8.10.0"
   },
