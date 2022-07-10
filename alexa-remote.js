@@ -2100,6 +2100,9 @@ class AlexaRemote extends EventEmitter {
             case 'goodmorning':
                 seqNode.type = 'Alexa.GoodMorning.Play';
                 break;
+            case 'goodnight':
+                seqNode.type = 'Alexa.GoodNight.Play';
+                break;
             case 'funfact':
                 seqNode.type = 'Alexa.FunFact.Play';
                 break;
