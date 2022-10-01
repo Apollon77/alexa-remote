@@ -34,7 +34,7 @@
     "querystring": "^0.2.1",
     "ws": "^8.8.1",
     "extend": "^3.0.2",
-    "uuid": "^8.3.2"
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^3.5.9",
