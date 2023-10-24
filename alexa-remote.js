@@ -2954,7 +2954,7 @@ class AlexaRemote extends EventEmitter {
     }
 
     getSmarthomeDevices(callback) {
-        this.httpsGet ('/api/phoenix?includeRelationships=true', function (err, res) {
+        this.httpsGet ('/api/phoenix', function (err, res) {
             if (err || !res || !res.networkDetail) return callback(err, res);
             try {
                 res = JSON.parse(res.networkDetail);
