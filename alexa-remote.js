@@ -105,7 +105,7 @@ class AlexaRemote extends EventEmitter {
             }
             this._options.amazonPage = this._options.amazonPage || 'amazon.de';
             this.baseUrl = `alexa.${this._options.amazonPage}`;
-
+            this._options.acceptLanguage = this._options.acceptLanguage || 'de-DE';
             cookie = this._options.cookie;
         }
         this._options.logger && this._options.logger(`Alexa-Remote: Use as User-Agent: ${this._options.userAgent}`);
@@ -2665,7 +2665,7 @@ class AlexaRemote extends EventEmitter {
                 seqNode.operationPayload.expireAfter = 'PT5S';
                 seqNode.operationPayload.content = [
                     {
-                        'locale': 'de-DE',
+                        'locale': this._options.acceptLanguage,
                         'display': {
                             'title': 'ioBroker',
                             'body': value.replace(/<[^>]+>/g, '')
@@ -2787,7 +2787,7 @@ class AlexaRemote extends EventEmitter {
             reqObj.sequenceJson = reqObj.sequenceJson.replace(/"deviceSerialNumber":"ALEXA_CURRENT_DSN"/g, `"deviceSerialNumber":"${dev.serialNumber}"`);
             reqObj.sequenceJson = reqObj.sequenceJson.replace(/"customerId":"ALEXA_CUSTOMER_ID"/g, `"customerId":"${dev.deviceOwnerCustomerId}"`);
         }
-        reqObj.sequenceJson = reqObj.sequenceJson.replace(/"locale":"ALEXA_CURRENT_LOCALE"/g, `"locale":"de-DE"`);
+        reqObj.sequenceJson = reqObj.sequenceJson.replace(/"locale":"ALEXA_CURRENT_LOCALE"/g, `"locale":"${this._options.acceptLanguage}"`);
 
         this.httpsGet (`/api/behaviors/preview`,
             callback,
@@ -2866,7 +2866,7 @@ class AlexaRemote extends EventEmitter {
         const operationPayload = {
             'deviceType': dev.deviceType,
             'deviceSerialNumber': dev.serialNumber,
-            'locale': 'de-DE', // TODO!!
+            'locale': this._options.acceptLanguage, // TODO!!
             'customerId': dev.deviceOwnerCustomerId,
             'musicProviderId': providerId,
             'searchPhrase': searchPhrase
@@ -2910,7 +2910,7 @@ class AlexaRemote extends EventEmitter {
         const operationPayload = {
             'deviceType': dev.deviceType,
             'deviceSerialNumber': dev.serialNumber,
-            'locale': 'de', // TODO!!
+            'locale': this._options.acceptLanguage, // TODO!!
             'customerId': dev.deviceOwnerCustomerId,
             'searchPhrase': searchPhrase
         };
