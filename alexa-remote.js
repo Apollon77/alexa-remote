@@ -10,7 +10,7 @@ const fsPath = require('path');
 
 const EventEmitter = require('events');
 
-const officialUserAgent = 'AppleWebKit PitanguiBridge/2.2.556530.0-[HARDWARE=iPhone14_7][SOFTWARE=16.6][DEVICE=iPhone]';
+const officialUserAgent = 'AppleWebKit PitanguiBridge/2.2.595606.0-[HARDWARE=iPhone14_7][SOFTWARE=17.4.1][DEVICE=iPhone]';
 
 function _00(val) {
     let s = val.toString();
@@ -651,13 +651,18 @@ class AlexaRemote extends EventEmitter {
                         (
                             this.lastVolumes[payload.dopplerId.deviceSerialNumber].volumeSetting === payload.volumeSetting &&
                             this.lastVolumes[payload.dopplerId.deviceSerialNumber].isMuted === payload.isMuted
+                        ) ||
+                        (
+                            this.lastEqualizer[payload.dopplerId.deviceSerialNumber] &&
+                            Math.abs(Date.now() - this.lastEqualizer[payload.dopplerId.deviceSerialNumber].updated) < 2000
                         )
                     ) {
                         this.simulateActivity(payload.dopplerId.deviceSerialNumber, payload.destinationUserId);
                     }
                     this.lastVolumes[payload.dopplerId.deviceSerialNumber] = {
                         volumeSetting: payload.volumeSetting,
-                        isMuted: payload.isMuted
+                        isMuted: payload.isMuted,
+                        updated: Date.now()
                     };
 
                     this.emit('ws-volume-change', {
@@ -706,6 +711,10 @@ class AlexaRemote extends EventEmitter {
                             this.lastEqualizer[payload.dopplerId.deviceSerialNumber].bass === payload.bass &&
                             this.lastEqualizer[payload.dopplerId.deviceSerialNumber].treble === payload.treble &&
                             this.lastEqualizer[payload.dopplerId.deviceSerialNumber].midrange === payload.midrange
+                        ) ||
+                        (
+                            this.lastVolumes[payload.dopplerId.deviceSerialNumber] &&
+                            Math.abs(Date.now() - this.lastVolumes[payload.dopplerId.deviceSerialNumber].updated) < 2000
                         )
                     ) {
                         this.simulateActivity(payload.dopplerId.deviceSerialNumber, payload.destinationUserId);
@@ -713,7 +722,8 @@ class AlexaRemote extends EventEmitter {
                     this.lastEqualizer[payload.dopplerId.deviceSerialNumber] = {
                         bass: payload.bass,
                         treble: payload.treble,
-                        midrange: payload.midrange
+                        midrange: payload.midrange,
+                        updated: Date.now()
                     };
 
                     this.emit('ws-equilizer-state-change', {
@@ -1122,10 +1132,9 @@ class AlexaRemote extends EventEmitter {
                 'User-Agent' : `${officialUserAgent} ${this._options.apiUserAgentPostfix}`.trim(),
                 'Content-Type': 'application/json; charset=utf-8',
                 'Accept': 'application/json; charset=utf-8',
+                'Accept-Language': this._options.acceptLanguage || 'de-DE',
                 'Referer': `https://alexa.${this._options.amazonPage}/spa/index.html`,
                 'Origin': `https://alexa.${this._options.amazonPage}`,
-                //'Content-Type': 'application/json',
-                //'Connection': 'keep-alive',
                 'csrf' : this.csrf,
                 'Cookie' : this.cookie,
                 'Accept-Encoding': 'gzip, deflate'
@@ -1152,6 +1161,10 @@ class AlexaRemote extends EventEmitter {
 
         options.path = path;
         options.method = flags.method ? flags.method : flags.data ? 'POST' : 'GET';
+
+        if ((options.method === 'GET' || options.method === 'DELETE') && !flags.data) {
+            delete options.headers['Content-Type'];
+        }
 
         if (flags.headers) Object.keys(flags.headers).forEach(n => {
             options.headers [n] = flags.headers[n];
@@ -2129,7 +2142,7 @@ class AlexaRemote extends EventEmitter {
             return this._getCustomerHistoryRecords(options, callback);
         }
 
-        const csrfPageUrl = `https://www.${this._options.amazonPage}/alexa-privacy/apd/activity?ref=activityHistory`; // disableGlobalNav=true&locale=de-DE
+        const csrfPageUrl = `https://www.${this._options.amazonPage}/alexa-privacy/apd/activity?disableGlobalNav=true&ref=activityHistory`; // disableGlobalNav=true&locale=de-DE
         this.httpsGet(csrfPageUrl, (err, result) => {
             if (err || !result) return callback && callback(err, result);
 

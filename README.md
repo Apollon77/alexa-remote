@@ -43,6 +43,11 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
+
+### __WORK IN PROGRESS__
+* (Apollon77) Adjust Activity Record query to Amazon changes
+* (NebzHB) fix missing amazonPage reference instead of amazon.de
+
 ### 7.0.3 (2024-01-25)
 * (Apollon77) Adjust Activity Record query to newest Amazon changes
 
