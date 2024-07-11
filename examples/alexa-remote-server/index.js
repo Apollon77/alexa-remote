@@ -110,7 +110,7 @@ app.get('/names', (req, res) => {
 });
 
 // expects a json: { deviceName: "Kitchen", text: "Something to say" }
-// try from the browser: 
+// try from the command line: 
 // curl 'http://localhost:3000/speak' -H 'Content-Type: application/json' --data-raw '{"deviceName":"Kitchen","text":"Hi"}'
 app.post('/speak', (req, res) => {
     const data = req.body;
