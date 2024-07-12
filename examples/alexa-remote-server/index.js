@@ -58,7 +58,6 @@ alexa.init(
 
 alexa.on('cookie', (cookie, csrf, macDms) => {
     writeToFile(cookiePath, cookie);
-    writeToFile(csrfPath, csrf);
     writeToFile(macDmsPath, macDms);
 });
 
@@ -84,20 +83,18 @@ app.get('/reconnect', (req, res) => {
         if (err) {
             console.log(err);
             const url = extractUrl(err.message);
-            if (url !== 'no match') {
+            if (url == 'no match') {
+                res.send(`Error reinitializing: ${err.message}`);
+            } else {
                 res.redirect(url);
                 return;
-            } else {
-                res.send(`Error reinitializing: ${err.message}`);
             }
         } else {
             res.send('alexa connection was reinitialized');
         }
-    }
-    );
+    });
     alexa.on('cookie', (cookie, csrf, macDms) => {
         writeToFile(cookiePath, cookie);
-        writeToFile(csrfPath, csrf);
         writeToFile(macDmsPath, macDms);
     });
 

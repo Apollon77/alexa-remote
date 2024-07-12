@@ -30,7 +30,7 @@ If the Push connection is never established, then you can try to use the followi
 
 Then it should work again
 
-## Example
+## Examples
 
 see example folder
 
