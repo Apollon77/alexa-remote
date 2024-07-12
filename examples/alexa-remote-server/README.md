@@ -7,6 +7,7 @@ npm install
 npm start
 ```
 And access [http://localhost:3000/reconnect](http://localhost:3000/reconnect).  
-You will be redirected to the login page, and after that, your session will be saved to `HomeFolder/alexaRemote`.  
+You will be redirected to the login page, and after that, your session will be saved to `HomeFolder/.alexaRemote`.  
 You can then do a post to send the `speak` command to an alexa by its name (Kitchen in this example):  
-`curl 'http://localhost:3000/speak' -H 'Content-Type: application/json' --data-raw '{"deviceName":"Kitchen","text":"Hi"}'`
+`curl 'http://localhost:3000/speak' -H 'Content-Type: application/json' --data-raw '{"deviceName":"Kitchen","text":"Hi"}'`  
+
