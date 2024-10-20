@@ -46,6 +46,7 @@ Thank you for that work.
 
 ### __WORK IN PROGRESS__
 * (danielbrunt57) Adds additional Amazon domains for HTTP/2 push connections
+* (beothorn) Fixes Typing information for "names" property
 
 ### 7.0.4 (2024-04-16)
 * (Apollon77) Adjust Activity Record query to Amazon changes
