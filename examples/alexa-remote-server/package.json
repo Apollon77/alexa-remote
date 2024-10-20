@@ -1,0 +1,14 @@
+{
+  "name": "alexa-remote-server",
+  "version": "1.0.0",
+  "description": "Example aplication that exposes an api to relay commands to alexa.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "alexa-remote2": "^7.0.4",
+    "express": "^4.19.2"
+  }
+}
