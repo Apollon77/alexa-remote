@@ -43,8 +43,7 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
-
-### __WORK IN PROGRESS__
+### 7.0.5 (2024-10-20)
 * (danielbrunt57) Adds additional Amazon domains for HTTP/2 push connections
 * (beothorn) Fixes Typing information for "names" property
 
