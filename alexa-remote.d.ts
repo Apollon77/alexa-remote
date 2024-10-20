@@ -278,7 +278,7 @@ declare module "alexa-remote2" {
         cookieData?: string;
         baseUrl: string;
         friendlyNames: Record<string, string>;
-        names: Record<string, string>;
+        names: Record<string, Serial>;
         lastAuthCheck: number | null;
 
         setCookie(_cookie: string): void;
