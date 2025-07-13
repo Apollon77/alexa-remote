@@ -43,8 +43,7 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
-
-### __WORK IN PROGRESS__
+### 8.0.0 (2025-07-13)
 * IMPORTANT: This version updated "list" and "Smarthome" APIs to the latest Amazon changes. SOme of these are breaking! Please see changelog below for details!
 * (Apollon77) Added new methods as "V2" to represent the new Amazon API. The delivered data have a different structure and some values are not available anymore.
   * getListsV2
