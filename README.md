@@ -43,6 +43,27 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
+
+### __WORK IN PROGRESS__
+* IMPORTANT: This version updated "list" and "Smarthome" APIs to the latest Amazon changes. SOme of these are breaking! Please see changelog below for details!
+* (Apollon77) Added new methods as "V2" to represent the new Amazon API. The delivered data have a different structure and some values are not available anymore.
+  * getListsV2
+  * getListV2
+  * getListItemsV2
+  * getSmarthomeDevicesV2
+* (Apollon77) The following methods got deprecated and try to deliver a comparable response as before by internally using the new APIs. This mapping is done on best effort and might not be 100%!
+  * getLists
+  * getList
+  * getListItems
+  * getSmarthomeDevices
+* (Apollon77) deleteListItem got a new options parameter added because the version of the list to delete is required now. An Error is returned if the version is not provided.
+* (Apollon77) The following methods were updated to use the new APIs in the background, so no V2 method was added:
+  * addListItem
+  * updateListItem
+* (Apollon77) The following former deprecated methods were removed 
+  * getHistory
+  * getActivities
+
 ### 7.0.5 (2024-10-20)
 * (danielbrunt57) Adds additional Amazon domains for HTTP/2 push connections
 * (beothorn) Fixes Typing information for "names" property
