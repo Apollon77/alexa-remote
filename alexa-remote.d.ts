@@ -172,10 +172,10 @@ declare module "alexa-remote2" {
     }>;
 
     export type ListItemOptions = Partial<{
-        startTime: string;
-        endTime: string;
         completed: string;
         listIds: string;
+        version: string;
+        value: string;
     }>;
 
     export type GetCustomerHistoryRecordsOptions = {
@@ -359,11 +359,21 @@ declare module "alexa-remote2" {
             callback: CallbackWithErrorAndBody
         ): void;
 
+        /** @deprecated Use getListsV2 instead */
         getLists(callback: CallbackWithErrorAndBody): void;
+        getListsV2(callback: CallbackWithErrorAndBody): void;
 
+        /** @deprecated Use getListV2 instead */
         getList(listId: string, callback: CallbackWithErrorAndBody): void;
+        getListV2(listId: string, callback: CallbackWithErrorAndBody): void;
 
+        /** @deprecated Use getListItemsV2 instead */
         getListItems(
+            listId: string,
+            options: ListItemOptions,
+            callback: CallbackWithErrorAndBody
+        ): void;
+        getListItemsV2(
             listId: string,
             options: ListItemOptions,
             callback: CallbackWithErrorAndBody
@@ -377,14 +387,15 @@ declare module "alexa-remote2" {
 
         updateListItem(
             listId: string,
-            listItem: string,
+            listItemId: string,
             options: ListItemOptions,
             callback: CallbackWithErrorAndBody
         ): void;
 
         deleteListItem(
             listId: string,
-            listItem: string,
+            listItemId: string,
+            options: ListItemOptions,
             callback: CallbackWithErrorAndBody
         ): void;
 
@@ -645,7 +656,9 @@ declare module "alexa-remote2" {
 
         getAllDeviceVolumes(callback: CallbackWithErrorAndBody): void;
 
+        /** @deprecated Use getSmarthomeDevicesV2 instead */
         getSmarthomeDevices(callback: CallbackWithErrorAndBody): void;
+        getSmarthomeDevicesV2(callback: CallbackWithErrorAndBody): void;
 
         getSmarthomeGroups(callback: CallbackWithErrorAndBody): void;
 

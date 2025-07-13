@@ -18,6 +18,90 @@ function _00(val) {
     return s;
 }
 
+const SmartHomeEndpointsGraphQlQuery = `query Endpoints {
+  endpoints {
+    items {
+      endpointId
+      id
+      friendlyName
+      displayCategories {
+        primary {
+          value
+        }
+      }
+      legacyIdentifiers {
+          dmsIdentifier {
+              deviceType {
+                  type
+                  value {
+                      text
+                  }
+              }
+              deviceSerialNumber {
+                  type
+                  value {
+                      text
+                  }
+              }
+          }
+      }
+      legacyAppliance {
+        applianceId
+        applianceTypes
+        endpointTypeId
+        friendlyName
+        friendlyDescription
+        manufacturerName
+        connectedVia
+        modelName
+        entityId
+        actions
+        mergedApplianceIds
+        capabilities
+        applianceNetworkState
+        version
+        isEnabled
+        customerDefinedDeviceType
+        customerPreference
+        alexaDeviceIdentifierList
+        aliases
+        driverIdentity
+        additionalApplianceDetails
+        isConsentRequired
+        applianceKey
+        appliancePairs
+        deduplicatedPairs
+        entityPairs
+        deduplicatedAliasesByEntityId
+        relations
+      }
+      serialNumber {
+        value {
+          text
+        }
+      }
+      enablement
+      model {
+        value {
+          text
+        }
+      }
+      manufacturer {
+        value {
+          text
+        }
+      }
+      features {
+        name
+        operations {
+          name
+        }
+      }
+    }
+  }
+}
+`;
+
 
 class AlexaRemote extends EventEmitter {
 
@@ -1000,7 +1084,6 @@ class AlexaRemote extends EventEmitter {
         flags = flags || {};
         flags.host = this.endpoints.alexaApiUrl.replace(/^https?:\/\//, '');
         flags.headers = flags.headers || {};
-        flags.host = this.endpoints.alexaApiUrl.replace(/^https?:\/\//, '');
         flags.cleanHeader = true;
         flags.headers = flags.headers || {};
         flags.headers.authorization = this.authApiBearerToken;
@@ -1055,8 +1138,20 @@ class AlexaRemote extends EventEmitter {
         });
     }
 
-    httpsGetCall(path, callback, flags = {}) {
+    // API Host call without Authorization header
+    httpsApiGet(path, callback, flags) {
+        if (!this.endpoints || !this.endpoints.alexaApiUrl) {
+            this._options.logger && this._options.logger(`Alexa-Remote: No endpoint set for alexaApiUrl: ${JSON.stringify(this.endpoints)}`);
+            return callback && callback(new Error(`No endpoint set for alexaApiUrl: ${JSON.stringify(this.endpoints)}`));
+        }
+        flags = flags || {};
+        if (!flags.host) {
+            flags.host = this.endpoints.alexaApiUrl.replace(/^https?:\/\//, '');
+        }
+        return this.httpsGetCall(path,callback, flags);
+    }
 
+    httpsGetCall(path, callback, flags = {}) {
         const handleResponse = (err, res, body) => {
             if (!err && typeof res.statusCode === 'number' && res.statusCode === 401) {
                 this._options.logger && this._options.logger('Alexa-Remote: Response: 401 Unauthorized');
@@ -1290,7 +1385,7 @@ class AlexaRemote extends EventEmitter {
     }
 
     getDevices(callback) {
-        this.httpsGet ('/api/devices-v2/device?cached=true&_=%t', callback);
+        this.httpsGet('/api/devices-v2/device?cached=true&_=%t', callback);
     }
 
     getCards(limit, beforeCreationTime, callback) {
@@ -1303,90 +1398,230 @@ class AlexaRemote extends EventEmitter {
             beforeCreationTime = '%t';
         }
         if (beforeCreationTime === undefined) beforeCreationTime = '%t';
-        this.httpsGet (`/api/cards?limit=${limit}&beforeCreationTime=${beforeCreationTime}000&_=%t`, callback);
+        this.httpsGet(`/api/cards?limit=${limit}&beforeCreationTime=${beforeCreationTime}000&_=%t`, callback);
     }
 
     getUsersMe(callback) {
-        this.httpsGetCall('/api/users/me?platform=ios&version=2.2.556530.0', callback);
+        this.httpsGetCall('/api/users/me?platform=ios&version=2.2.651540.0', callback);
     }
 
     getHousehold(callback) {
-        this.httpsGetCall('/api/household', callback);
+        this.httpsGet('/api/household', callback);
     }
 
     getMedia(serialOrName, callback) {
         const dev = this.find(serialOrName);
         if (!dev) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/media/state?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}&screenWidth=1392&_=%t`, callback);
+        this.httpsGet(`/api/media/state?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}&screenWidth=1392&_=%t`, callback);
     }
 
     getPlayerInfo(serialOrName, callback) {
         const dev = this.find(serialOrName);
         if (!dev) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/np/player?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}&screenWidth=1392&_=%t`, callback);
+        this.httpsGet(`/api/np/player?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}&screenWidth=1392&_=%t`, callback);
     }
 
+    /** @deprecated Use getListsV2 instead */
     getLists(callback) {
-        this.httpsGet ('/api/namedLists?_=%t', (err, res) => callback && callback(err, res && res.lists));
+        this.getListsV2((err, lists) => {
+            if (err) {
+                this._options.logger && this._options.logger(`Alexa-Remote: Error getting lists: ${err.message}`);
+                return callback && callback(err);
+            }
+            const mappedList = lists.map(list => {
+                let count = null;
+                try {
+                    count = JSON.parse(list.totalActiveItemsCount).count;
+                } catch (e) {
+                    // Ignore
+                }
+                return {
+                    id: Array.isArray(list.id) && list.id.length > 0 ? list.id[0] : list.listId,
+                    listId: list.listId,
+                    itemId: list.listId,
+                    name: list.listName || list.listType,
+                    createdDateTime: list.createAt,
+                    updatedDateTime: list.updateAt,
+                    totalActiveItemsCount: count,
+                    ownerCustomerId: list.customerId,
+                };
+            });
+            callback && callback(null, mappedList);
+        });
     }
 
+    getListsV2(callback) {
+        // request options
+        const request = {
+            'method': 'POST',
+            'data': JSON.stringify({
+                listAttributesToAggregate:[
+                    /*{ type:'listCategories' },
+                    { type:'categoryOverride' },
+                    { type:'shareableInfo','marketplaceId':'A1PA6795UKMFR9','clientId':'AlexaApp' },
+                    { type:'sharedListOwnerInfo' },
+                    { type:'collaboratorInfo' },*/
+                    { type:'totalActiveItemsCount' }
+                ],
+                listOwnershipType: null
+            })
+        };
+
+        this.httpsGet(`https://www.${this._options.amazonPage}/alexashoppinglists/api/v2/lists/fetch`, (err, res) => callback && callback(err, res && res.listInfoList), request);
+    }
+
+    /** @deprecated Use getListV2 instead */
     getList(listId, callback) {
-        this.httpsGet (`/api/namedLists/${listId}?_=%t`, callback);
+        this.getListV2(listId, (err, list) => {
+            if (err) {
+                this._options.logger && this._options.logger(`Alexa-Remote: Error getting lists: ${err.message}`);
+                return callback && callback(err);
+            }
+            let count = null;
+            try {
+                count = JSON.parse(list.totalActiveItemsCount).count;
+            } catch (e) {
+                // Ignore
+            }
+            const mappedList = {
+                id: Array.isArray(list.id) && list.id.length > 0 ? list.id[0] : list.listId,
+                listId: list.listId,
+                itemId: list.listId,
+                name: list.listName || list.listType,
+                createdDateTime: list.createAt,
+                updatedDateTime: list.updateAt,
+                totalActiveItemsCount: count,
+                ownerCustomerId: list.customerId,
+            };
+            callback && callback(null, mappedList);
+        });
+    }
+
+    getListV2(listId, callback, limit) {
+        // request options
+        const request = {
+            'method': 'POST',
+            'data': JSON.stringify({
+                listAttributesToAggregate: [
+                    /*{'type':'listCategories'},
+                    {'type':'shareableInfo','marketplaceId':'A1PA6795UKMFR9','clientId':'AlexaApp'},
+                    {'type':'keywordRecommendations','clientId':'AlexaApp','marketplaceId':'A1PA6795UKMFR9','locale':'de_DE'},*/
+                    {'type':'totalActiveItemsCount'},
+                    /*{'type':'categoryOverride'}*/
+                ]
+            })
+        };
+
+        this.httpsGet(`https://www.${this._options.amazonPage}/alexashoppinglists/api/v2/lists/${listId}/items/fetch?limit=${limit || 100}`, (err, res) => callback && callback(err, res && res.listInfo), request);
     }
 
     /**
-	 * Get items from a list.
-	 *
-	 * @param {String} listId List ID to retrieve items from
-	 * @param {Object} [options] additional options to filter items
-	 * @param {String} [options.startTime] filter items regarding start time
-	 * @param {String} [options.endTime] filter items regarding end time
-	 * @param {String} [options.completed] filter items regarding completion
-	 * @param {String} [options.listIds] list IDs
+     * Get items from a list.
+     *
+     * @param {String} listId List ID to retrieve items from
+     * @param {Object} options Options to pass to the request
+     * @param {number} options.limit Limit of items to retrieve
      * @param {function} callback
-	 *
-	 */
+     *
+     * @deprecated Use getListItemsV2 instead
+     */
     getListItems(listId, options, callback) {
-        // get function params
         if (typeof options === 'function') {
             callback = options;
             options = {};
         }
 
-        // get params by options
-        let params = '';
-        for (const option in options) {
-            params += `&${option}=${options[option]}`;
+        this.getListItemsV2(listId, options, (err, items) => {
+            if (err) {
+                this._options.logger && this._options.logger(`Alexa-Remote: Error getting list: ${err.message}`);
+                return callback && callback(err);
+            }
+            const mappedItems = items.map(item => ({
+                id: item.itemId,
+                listId: item.listId,
+                value: item.itemName,
+                customerId: item.customerId,
+                completed: item.itemStatus === 'COMPLETE',
+                createdDateTime: item.createAt,
+                updatedDateTime: item.updateAt,
+                version: item.version,
+                note: item.note,
+            }));
+            callback && callback(null, mappedItems);
+        });
+    }
+
+    /**
+	 * Get items from a list with v2 API.
+	 *
+	 * @param {String} listId List ID to retrieve items from
+     * @param {Object} options Options to pass to the request
+     * @param {number} options.limit Limit of items to retrieve
+     * @param {function} callback
+	 *
+	 */
+    getListItemsV2(listId, options, callback) {
+        if (typeof options === 'function') {
+            callback = options;
+            options = {};
         }
 
+        if (!listId) {
+            this._options.logger && this._options.logger('Alexa-Remote: Error getting list items: No listId provided');
+            return callback && callback(new Error('No listId provided'));
+        }
+
+        const limit = options.limit || 100;
+
+        const request = {
+            'method': 'POST',
+            'data': JSON.stringify({
+                itemAttributesToProject:['quantity',/*'speakerId','asinInfo',*/'note',/*'dealInfo'*/],
+                /*itemAttributesToAggregate:[
+                    {type:'categorization'},{type:'speakerInfo','marketplaceId':'A1PA6795UKMFR9'}
+                ],*/
+                /*listAttributesToAggregate:[
+                    {type:'listCategories'},
+                    {type:'shareableInfo','marketplaceId':'A1PA6795UKMFR9','clientId':'AlexaApp'},
+                    {type:'keywordRecommendations','clientId':'AlexaApp','marketplaceId':'A1PA6795UKMFR9','locale':'de_DE'},
+                    {type:'totalActiveItemsCount'},{type:'categoryOverride'}
+                ]*/
+            })
+        };
+
         // send request
-        this.httpsGet (`/api/namedLists/${listId}/items?_=%t${params}`, (err, res) => callback && callback(err, res && res.list));
+        this.httpsGet(`https://www.${this._options.amazonPage}/alexashoppinglists/api/v2/lists/${listId}/items/fetch?limit=${limit}`, (err, res) => callback && callback(err, res && res.itemInfoList), request);
     }
 
     addListItem(listId, options, callback) {
         // get function params
         if (typeof options === 'string') {
-            options = { 'value': options };
+            options = { value: options };
         }
 
         // request options
         const request = {
             'method': 'POST',
             'data': JSON.stringify({
-                'listId': listId,
-                'createdDateTime': new Date().getTime(),
-                'completed': false,
-                ...options
+                items : [{
+                    itemType:'KEYWORD',
+                    itemName: options.value,
+                    /*itemAttributesToCreate: [{ type : 'speakerId'}],
+                    itemAttributesToAggregate : [
+                        { type:'categorization'},
+                        { type:'speakerInfo', marketplaceId: 'A1PA6795UKMFR9'}
+                    ]*/
+                }]
             })
         };
 
         // send request
-        this.httpsGet (`/api/namedLists/${listId}/item`, callback, request);
+        this.httpsGet(`https://www.${this._options.amazonPage}/alexashoppinglists/api/v2/lists/${listId}/items`, (err, res) => callback && callback(err, res && res.itemInfoList), request);
     }
 
-    updateListItem(listId, listItem, options, callback) {
+    updateListItem(listId, listItemId, options, callback) {
         // providing a version is mandatory
         if (typeof options !== 'object' || !options.version || !options.value) {
             const errors = [];
@@ -1403,45 +1638,76 @@ class AlexaRemote extends EventEmitter {
             return false;
         }
 
+        const itemAttributesToUpdate = [];
+        const itemAttributesToRemove = [];
+        for (const key in options) {
+            switch (key) {
+                case 'value':
+                    itemAttributesToUpdate.push({ type: 'itemName', value: options.value });
+                    break;
+                case 'note':
+                    if (options.note === null || options.note === undefined) {
+                        itemAttributesToRemove.push({ type: 'note' });
+                        break;
+                    }
+                    itemAttributesToUpdate.push({ type: 'note', value: options.note });
+                    break;
+                case 'completed':
+                    itemAttributesToUpdate.push({ type: 'itemStatus', value: options.completed ? 'COMPLETE' : 'ACTIVE' });
+                    break;
+                case 'itemStatus':
+                    if (options.completed !== undefined) {
+                        break; // ignore, because itemStatus is handled by completed
+                    }
+                    itemAttributesToUpdate.push({ type: 'itemStatus', value: options.itemStatus });
+                    break;
+                case 'quantity':
+                    if (options.quantity === null || options.quantity === undefined) {
+                        itemAttributesToRemove.push({ type: 'quantity' });
+                        break;
+                    }
+                    itemAttributesToUpdate.push({ type: 'quantity', value: options.quantity });
+                    break;
+            }
+        }
+
         // request options
         const request = {
             'method': 'PUT',
             'data': JSON.stringify({
-                'listId': listId,
-                'id': listItem,
-                'updatedDateTime': new Date().getTime(),
-                ...options
+                itemAttributesToUpdate,
+                itemAttributesToRemove,
             })
         };
 
         // send request
-        this.httpsGet (`/api/namedLists/${listId}/item/${listItem}`, callback, request);
+        this.httpsGet(`https://www.${this._options.amazonPage}/alexashoppinglists/api/v2/lists/${listId}/items/${listItemId}?version =${options.version}`, (err, res) => callback && callback(err, res && res.itemInfoList), request);
     }
 
-    deleteListItem(listId, listItem, callback) {
-        // data
-        const data = JSON.stringify({
-            'listId': listId,
-            'id': listItem,
-            'value': '' // must be provided, but value doesn't matter
-        });
+    deleteListItem(listId, listItemId, options, callback) {
+        // providing a version is mandatory
+        if (typeof options !== 'object' || !options.version) {
+            const errors = [];
+
+            if (!options.version && callback) {
+                errors.push('Providing the current version via options is mandatory!');
+            }
+
+            callback && callback(errors);
+            return false;
+        }
 
         // request options
         const request = {
             'method': 'DELETE',
-            'data': data,
-            'headers': {
-                'Content-Type': 'application/json',
-                'Content-Length': data.length
-            }
         };
 
         // send request
-        this.httpsGet (`/api/namedLists/${listId}/item/${listItem}`, callback, request);
+        this.httpsGet(`https://www.${this._options.amazonPage}/alexashoppinglists/api/v2/lists/${listId}/items/${listItemId}?version=${options.version}`, callback, request);
     }
 
     getWakeWords(callback) {
-        this.httpsGet (`/api/wake-word?_=%t`, callback);
+        this.httpsGet(`/api/wake-word?_=%t`, callback);
     }
 
     getReminders(cached, callback) {
@@ -1453,7 +1719,7 @@ class AlexaRemote extends EventEmitter {
             cached = true;
         }
         if (cached === undefined) cached = true;
-        this.httpsGet (`/api/notifications?cached=${cached}&_=%t`, callback);
+        this.httpsGet(`/api/notifications?cached=${cached}&_=%t`, callback);
     }
 
     getNotificationSounds(serialOrName, alertType, callback) {
@@ -1464,7 +1730,7 @@ class AlexaRemote extends EventEmitter {
         const device = this.find(serialOrName);
         if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/notification/sounds?deviceType=${device.deviceType}&deviceSerialNumber=${device.serialNumber}&softwareVersion=${device.softwareVersion}${alertType ? `&alertType=${alertType}` : ''}`, callback);
+        this.httpsGet(`/api/notification/sounds?deviceType=${device.deviceType}&deviceSerialNumber=${device.serialNumber}&softwareVersion=${device.softwareVersion}${alertType ? `&alertType=${alertType}` : ''}`, callback);
     }
 
     // alarm volume
@@ -1472,14 +1738,14 @@ class AlexaRemote extends EventEmitter {
         const device = this.find(serialOrName);
         if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/device-notification-state/${device.deviceType}/${device.softwareVersion}/${device.serialNumber}`, callback);
+        this.httpsGet(`/api/device-notification-state/${device.deviceType}/${device.softwareVersion}/${device.serialNumber}`, callback);
     }
 
     setDeviceNotificationVolume(serialOrName, volumeLevel, callback) {
         const device = this.find(serialOrName);
         if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/device-notification-state/${device.deviceType}/${device.softwareVersion}/${device.serialNumber}`, callback , {
+        this.httpsGet(`/api/device-notification-state/${device.deviceType}/${device.softwareVersion}/${device.serialNumber}`, callback , {
             'method': 'PUT',
             'data': JSON.stringify({
                 volumeLevel
@@ -1491,7 +1757,7 @@ class AlexaRemote extends EventEmitter {
         const device = this.find(serialOrName);
         if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/notification/default-sound`, callback, {
+        this.httpsGet(`/api/notification/default-sound`, callback, {
             'method': 'PUT',
             'data': JSON.stringify({
                 'deviceType': device.deviceType,
@@ -1506,7 +1772,7 @@ class AlexaRemote extends EventEmitter {
         const device = this.find(serialOrName);
         if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/notification/default-sound?deviceType=${device.deviceType}&deviceSerialNumber=${device.serialNumber}&notificationType=${notificationType}`, callback);
+        this.httpsGet(`/api/notification/default-sound?deviceType=${device.deviceType}&deviceSerialNumber=${device.serialNumber}&notificationType=${notificationType}`, callback);
     }
 
     getAscendingAlarmState(serialOrName, callback) {
@@ -1515,7 +1781,7 @@ class AlexaRemote extends EventEmitter {
             serialOrName = undefined;
         }
 
-        this.httpsGet (`/api/ascending-alarm`, (err, res) => {
+        this.httpsGet(`/api/ascending-alarm`, (err, res) => {
             if (serialOrName) {
                 const device = this.find(serialOrName);
                 if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
@@ -1530,7 +1796,7 @@ class AlexaRemote extends EventEmitter {
         const device = this.find(serialOrName);
         if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
-        this.httpsGet (`/api/ascending-alarm/${device.serialNumber}`, callback, {
+        this.httpsGet(`/api/ascending-alarm/${device.serialNumber}`, callback, {
             'method': 'PUT',
             'data': JSON.stringify({
                 deviceSerialNumber: device.serialNumber,
@@ -1568,7 +1834,7 @@ class AlexaRemote extends EventEmitter {
     }
 
     getWholeHomeAudioGroups(callback) {
-        this.httpsGet ('/api/wholeHomeAudio/v1/groups', (err, res) => callback && callback(err, res && res.groups));
+        this.httpsGet('/api/wholeHomeAudio/v1/groups', (err, res) => callback && callback(err, res && res.groups));
     }
 
     createNotificationObject(serialOrName, type, label, value, status, sound, recurring) { // type = Reminder, Alarm
@@ -1766,14 +2032,14 @@ class AlexaRemote extends EventEmitter {
                 method: 'POST',
                 data: JSON.stringify(notification)
             };
-            return this.httpsGetAuthApi (`/v1/alerts/alarms`, callback, flags);
+            return this.httpsGetAuthApi(`/v1/alerts/alarms`, callback, flags);
         }
 
         const flags = {
             data: JSON.stringify(notification),
             method: 'PUT'
         };
-        this.httpsGet (`/api/notifications/null`, callback, flags);
+        this.httpsGet(`/api/notifications/null`, callback, flags);
     }
 
     changeNotification(notification, value, callback) {
@@ -1813,7 +2079,7 @@ class AlexaRemote extends EventEmitter {
             method: 'PUT',
             data: JSON.stringify(notification)
         };
-        this.httpsGet (`/api/notifications/${notification.id}`, function(err, res) {
+        this.httpsGet(`/api/notifications/${notification.id}`, function(err, res) {
             //  {'Message':null}
             callback && callback(err, res);
         },
@@ -1850,7 +2116,7 @@ class AlexaRemote extends EventEmitter {
             data: JSON.stringify (notification),
             method: 'DELETE'
         };
-        this.httpsGet (`/api/notifications/${notification.id}`, function(err, res) {
+        this.httpsGet(`/api/notifications/${notification.id}`, function(err, res) {
             //  {'Message':null}
             callback && callback(err, res);
         },
@@ -1872,7 +2138,7 @@ class AlexaRemote extends EventEmitter {
                 data: JSON.stringify (notification),
                 method: 'PUT'
             };
-            this.httpsGet (`/api/notifications/${notification.id}`, callback, flags);
+            this.httpsGet(`/api/notifications/${notification.id}`, callback, flags);
         }
     }
 
@@ -1880,7 +2146,7 @@ class AlexaRemote extends EventEmitter {
         return this.getDeviceStatusList(callback);
     }
     getDeviceStatusList(callback) {
-        this.httpsGet (`/api/dnd/device-status-list?_=%t`, callback);
+        this.httpsGet(`/api/dnd/device-status-list?_=%t`, callback);
     }
 
     getBluetooth(cached, callback) {
@@ -1889,11 +2155,11 @@ class AlexaRemote extends EventEmitter {
             cached = true;
         }
         if (cached === undefined) cached = true;
-        this.httpsGet (`/api/bluetooth?cached=${cached}`, callback);
+        this.httpsGet(`/api/bluetooth?cached=${cached}`, callback);
     }
 
     tuneinSearchRaw(query, callback) {
-        this.httpsGet (`/api/tunein/search?query=${query}&mediaOwnerCustomerId=${this.ownerCustomerId}&_=%t`, callback);
+        this.httpsGet(`/api/tunein/search?query=${query}&mediaOwnerCustomerId=${this.ownerCustomerId}&_=%t`, callback);
     }
 
     tuneinSearch(query, callback) {
@@ -1919,10 +2185,10 @@ class AlexaRemote extends EventEmitter {
             data: JSON.stringify(tuneInJson),
             method: 'PUT'
         };
-        this.httpsGet (`/api/entertainment/v1/player/queue?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}`, callback, flags);
+        this.httpsGet(`/api/entertainment/v1/player/queue?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}`, callback, flags);
 
         /*
-        this.httpsGet (`/api/tunein/queue-and-play
+        this.httpsGet(`/api/tunein/queue-and-play
            ?deviceSerialNumber=${dev.serialNumber}
            &deviceType=${dev.deviceType}
            &guideId=${guideId}
@@ -1930,88 +2196,6 @@ class AlexaRemote extends EventEmitter {
            &callSign=
            &mediaOwnerCustomerId=${dev.deviceOwnerCustomerId}`, callback, { method: 'POST' });
          */
-    }
-
-    /**
-     * @deprecated
-     */
-    getHistory(options, callback) {
-        return this.getActivities(options, callback);
-    }
-    /**
-     * @deprecated
-     */
-    getActivities(options, callback) {
-        if (typeof options === 'function') {
-            callback = options;
-            options = {};
-        }
-        this.httpsGet (`/api/activities` +
-            `?startTime=${options.startTime || ''}` +
-            `&size=${options.size || 1}` +
-            `&offset=${options.offset || 1}`,
-        (err, result) => {
-            if (err || !result) return callback/*.length >= 2*/ && callback(err, result);
-
-            const ret = [];
-            if (result.activities) {
-                for (let r = 0; r < result.activities.length; r++) {
-                    const res = result.activities[r];
-                    const o = {
-                        data: res
-                    };
-                    try {
-                        o.description = JSON.parse(res.description);
-                    } catch (e) {
-                        if (res.description) {
-                            o.description = {'summary': res.description};
-                        } else {
-                            return;
-                        }
-                    }
-                    if (!o.description) continue;
-                    o.description.summary = (o.description.summary || '').trim();
-                    if (options.filter) {
-                        switch (o.description.summary) {
-                            case 'stopp':
-                            case 'alexa':
-                            case 'echo':
-                            case 'computer':
-                            case 'amazon':
-                            case 'ziggy':
-                            case ',':
-                            case '':
-                                continue;
-                        }
-                    }
-                    for (let i = 0; i < res.sourceDeviceIds.length; i++) {
-                        o.deviceSerialNumber = res.sourceDeviceIds[i].serialNumber;
-                        if (!this.serialNumbers[o.deviceSerialNumber]) continue;
-                        o.name = this.serialNumbers[o.deviceSerialNumber].accountName;
-                        const dev = this.find(o.deviceSerialNumber);
-                        const wakeWord = (dev && dev.wakeWord) ? dev.wakeWord : null;
-                        if (wakeWord && o.description.summary.startsWith(wakeWord)) {
-                            o.description.summary = o.description.summary.substr(wakeWord.length).trim();
-                        } else if (o.description.summary.startsWith('alexa')) {
-                            o.description.summary = o.description.summary.substr(5).trim();
-                        }
-                        o.deviceType = res.sourceDeviceIds[i].deviceType || null;
-                        o.deviceAccountId = res.sourceDeviceIds[i].deviceAccountId || null;
-
-                        o.creationTimestamp = res.creationTimestamp || null;
-                        o.activityStatus = res.activityStatus || null; // DISCARDED_NON_DEVICE_DIRECTED_INTENT, SUCCESS, FAIL, SYSTEM_ABANDONED
-                        try {
-                            o.domainAttributes = res.domainAttributes ? JSON.parse(res.domainAttributes) : null;
-                        } catch (e) {
-                            o.domainAttributes = res.domainAttributes || null;
-                        }
-                        if (o.description.summary || !options.filter) ret.push(o);
-                    }
-                }
-            }
-            if (typeof callback === 'function') return callback (err, ret);
-        }
-        );
     }
 
     _getCustomerHistoryRecords(options, callback) {
@@ -2167,7 +2351,7 @@ class AlexaRemote extends EventEmitter {
             callback = includeActors;
             includeActors = false;
         }
-        this.httpsGet (`https://alexa-comms-mobile-service.${this._options.amazonPage}/accounts${includeActors ? '?includeActors=true' : ''}`, callback);
+        this.httpsGet(`https://alexa-comms-mobile-service.${this._options.amazonPage}/accounts${includeActors ? '?includeActors=true' : ''}`, callback);
     }
 
     getContacts(options, callback) {
@@ -2184,7 +2368,7 @@ class AlexaRemote extends EventEmitter {
         if (options.dedupeMode === undefined) options.dedupeMode = 'RemoveCloudOnlyContactDuplicates';
         if (options.homeGroupId === undefined) options.homeGroupId = '';
 
-        this.httpsGet (
+        this.httpsGet(
             `https://alexa-comms-mobile-service.${this._options.amazonPage}/users/${this.commsId}/contacts
             ?includePreferencesByLevel=${options.includePreferencesByLevel}
             &includeNonAlexaContacts=${options.includeNonAlexaContacts}
@@ -2210,7 +2394,7 @@ class AlexaRemote extends EventEmitter {
         if (options.modifiedSinceDate === undefined) options.modifiedSinceDate = '1970-01-01T00:00:00.000Z';
         if (options.includeUserName === undefined) options.includeUserName = true;
 
-        this.httpsGet (
+        this.httpsGet(
             `https://alexa-comms-mobile-service.${this._options.amazonPage}/users/${this.commsId}/conversations
             ?latest=${options.latest}
             &includeHomegroup=${options.includeHomegroup}
@@ -2230,7 +2414,7 @@ class AlexaRemote extends EventEmitter {
             data: JSON.stringify({ bluetoothDeviceAddress: btAddress}),
             method: 'POST'
         };
-        this.httpsGet (`/api/bluetooth/pair-sink/${dev.deviceType}/${dev.serialNumber}`, callback, flags);
+        this.httpsGet(`/api/bluetooth/pair-sink/${dev.deviceType}/${dev.serialNumber}`, callback, flags);
     }
 
     disconnectBluetooth(serialOrName, btAddress, callback) {
@@ -2241,7 +2425,7 @@ class AlexaRemote extends EventEmitter {
             //data: JSON.stringify({ bluetoothDeviceAddress: btAddress}),
             method: 'POST'
         };
-        this.httpsGet (`/api/bluetooth/disconnect-sink/${dev.deviceType}/${dev.serialNumber}`, callback, flags);
+        this.httpsGet(`/api/bluetooth/disconnect-sink/${dev.deviceType}/${dev.serialNumber}`, callback, flags);
     }
 
     setDoNotDisturb(serialOrName, enabled, callback) {
@@ -2256,7 +2440,7 @@ class AlexaRemote extends EventEmitter {
             }),
             method: 'PUT'
         };
-        this.httpsGet (`/api/dnd/status`, callback, flags);
+        this.httpsGet(`/api/dnd/status`, callback, flags);
     }
 
     find(serialOrName) {
@@ -2283,7 +2467,7 @@ class AlexaRemote extends EventEmitter {
             }),
             method: 'PUT'
         };
-        this.httpsGet (`/api/device-notification-state/${dev.deviceType}/${dev.softwareVersion}/${dev.serialNumber}`, callback, flags);
+        this.httpsGet(`/api/device-notification-state/${dev.deviceType}/${dev.softwareVersion}/${dev.serialNumber}`, callback, flags);
     }
 
     sendCommand(serialOrName, command, value, callback) {
@@ -2326,7 +2510,7 @@ class AlexaRemote extends EventEmitter {
                 return;
         }
 
-        this.httpsGet (`/api/np/command?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}`,
+        this.httpsGet(`/api/np/command?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}`,
             callback,
             {
                 method: 'POST',
@@ -2802,7 +2986,7 @@ class AlexaRemote extends EventEmitter {
         }
         reqObj.sequenceJson = reqObj.sequenceJson.replace(/"locale":"ALEXA_CURRENT_LOCALE"/g, `"locale":"de-DE"`);
 
-        this.httpsGet (`/api/behaviors/preview`,
+        this.httpsGet(`/api/behaviors/preview`,
             callback,
             {
                 method: 'POST',
@@ -2817,7 +3001,7 @@ class AlexaRemote extends EventEmitter {
             limit = 0;
         }
         limit = limit || 2000;
-        this.httpsGet (`/api/behaviors/v2/automations?limit=${limit}`, callback, {
+        this.httpsGet(`/api/behaviors/v2/automations?limit=${limit}`, callback, {
             timeout: 30000
         });
     }
@@ -2857,15 +3041,15 @@ class AlexaRemote extends EventEmitter {
         };
 
         // send request
-        this.httpsGet (`/api/routines/catalog/action/${catalogId}`, callback, request);
+        this.httpsGet(`/api/routines/catalog/action/${catalogId}`, callback, request);
     }
 
     getMusicProviders(callback) {
-        this.httpsGet ('/api/behaviors/entities?skillId=amzn1.ask.1p.music',
+        this.httpsGet('/api/behaviors/entities?skillId=amzn1.ask.1p.music',
             callback,
             {
                 headers: {
-                    'Routines-Version': '3.0.128540'
+                    'Routines-Version': '3.0.264101'
                 }
             }
         );
@@ -2890,7 +3074,7 @@ class AlexaRemote extends EventEmitter {
             'operationPayload': JSON.stringify(operationPayload)
         };
 
-        this.httpsGet (`/api/behaviors/operation/validate`,
+        this.httpsGet(`/api/behaviors/operation/validate`,
             (err, res) => {
                 if (err) {
                     return callback && callback(err, res);
@@ -2933,7 +3117,7 @@ class AlexaRemote extends EventEmitter {
             'operationPayload': JSON.stringify(operationPayload)
         };
 
-        this.httpsGet (`/api/behaviors/operation/validate`,
+        this.httpsGet(`/api/behaviors/operation/validate`,
             (err, res) => {
                 if (err) {
                     return callback && callback(err, res);
@@ -2983,7 +3167,7 @@ class AlexaRemote extends EventEmitter {
             'operationPayload': JSON.stringify(operationPayload)
         };
 
-        this.httpsGet (`/api/behaviors/operation/validate`,
+        this.httpsGet(`/api/behaviors/operation/validate`,
             (err, res) => {
                 if (err) {
                     return callback && callback(err, res);
@@ -3052,7 +3236,7 @@ class AlexaRemote extends EventEmitter {
         const flags = {
             method: 'DELETE'
         };
-        this.httpsGet (`https://alexa-comms-mobile-service.${this._options.amazonPage}/users/${this.commsId}/conversations/${conversationId}?lastMessageId=${lastMessageId}`, callback, flags);
+        this.httpsGet(`https://alexa-comms-mobile-service.${this._options.amazonPage}/users/${this.commsId}/conversations/${conversationId}?lastMessageId=${lastMessageId}`, callback, flags);
     }
 
     setReminder(serialOrName, timestamp, label, callback) {
@@ -3061,7 +3245,7 @@ class AlexaRemote extends EventEmitter {
     }
 
     getHomeGroup(callback) {
-        this.httpsGet (`https://alexa-comms-mobile-service.${this._options.amazonPage}/users/${this.commsId}/identities?includeUserName=true`, callback);
+        this.httpsGet(`https://alexa-comms-mobile-service.${this._options.amazonPage}/users/${this.commsId}/identities?includeUserName=true`, callback);
     }
 
     getDevicePreferences(serialOrName, callback) {
@@ -3069,7 +3253,7 @@ class AlexaRemote extends EventEmitter {
             callback = serialOrName;
             serialOrName = null;
         }
-        this.httpsGet ('/api/device-preferences?cached=true', (err, res) => {
+        this.httpsGet('/api/device-preferences?cached=true', (err, res) => {
             if (serialOrName) {
                 const device = this.find(serialOrName);
                 if (!device) {
@@ -3095,7 +3279,7 @@ class AlexaRemote extends EventEmitter {
             return callback && callback(new Error('Unknown Device or Serial number'), null);
         }
 
-        this.httpsGet (`/api/device-preferences/${device.serialNumber}`, callback, {
+        this.httpsGet(`/api/device-preferences/${device.serialNumber}`, callback, {
             method: 'PUT',
             data: JSON.stringify(preferences)
         });
@@ -3106,38 +3290,95 @@ class AlexaRemote extends EventEmitter {
         if (!dev) {
             return callback && callback(new Error('Unknown Device or Serial number'), null);
         }
-        this.httpsGet (`/api/device-wifi-details?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}`, callback);
+        this.httpsGet(`/api/device-wifi-details?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}`, callback);
     }
 
     getAllDeviceVolumes(callback) {
-        this.httpsGet ('/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes', callback);
+        this.httpsGet('/api/devices/deviceType/dsn/audio/v1/allDeviceVolumes', callback);
     }
 
+    /** @deprecated Use getSmarthomeDevicesV2 instead */
     getSmarthomeDevices(callback) {
-        this.httpsGet ('/api/phoenix?includeRelationships=true', function (err, res) {
-            if (err || !res || !res.networkDetail) return callback(err, res);
-            try {
-                res = JSON.parse(res.networkDetail);
-            } catch(e) {
-                return callback('invalid JSON');
+        this.getSmarthomeDevicesV2((err, devices) => {
+            if (err) {
+                return callback && callback(err);
             }
-            if (!res.locationDetails) return callback('locationDetails not found');
-            callback (err, res.locationDetails);
-        }, {
-            timeout: 30000
+            const mappedResults = devices.map(device => ({
+                ...device,
+                ...device.legacyAppliance,
+                ...device.legacyIdentifiers,
+                legacyAppliance: undefined,
+                legacyIdentifiers: undefined,
+            }));
+            const amazonBridgeDetails = {};
+            mappedResults.forEach(device => {
+                const id = device.applianceId;
+                if (!id) {
+                    this._options.logger && this._options.logger(`Ignoring device without applianceId: ${JSON.stringify(device)}`);
+                    return;
+                }
+                if (
+                    device &&
+                    device.dmsIdentifier &&
+                    device.dmsIdentifier.deviceType &&
+                    device.dmsIdentifier.deviceType.value &&
+                    (
+                        device.dmsIdentifier.deviceType.value.text === 'A2IVLV5VM2W81' ||
+                        device.dmsIdentifier.deviceType.value.text === 'A2TF17PFR55MTB'
+                    )
+                ) {
+                    return; // Ignore Alexa App devices
+                }
+
+                amazonBridgeDetails[`LambdaBridge_${id}`] = amazonBridgeDetails[`LambdaBridge_${id}`] || {
+                    applianceDetails: {
+                        applianceDetails: {}
+                    }
+                };
+                amazonBridgeDetails[`LambdaBridge_${id}`].applianceDetails.applianceDetails[id] = device;
+            });
+            const result = {
+                locationDetails: {
+                    Default_Location: {
+                        locationId: 'Default_Location',
+                        amazonBridgeDetails: {
+                            amazonBridgeDetails
+                        }
+                    }
+                }
+            };
+            callback && callback(null, result);
         });
     }
 
+    getSmarthomeDevicesV2(callback) {
+        const request = {
+            method: 'POST',
+            data: JSON.stringify({ query: SmartHomeEndpointsGraphQlQuery}),
+            timeout: 30000
+        };
+
+        this.httpsGet('/nexus/v1/graphql', function (err, res) {
+            if (!err && (!res.data || !res.data.endpoints || !Array.isArray(res.data.endpoints.items))) {
+                err = new Error('Invalid response from server');
+            }
+            if (err) {
+                return callback && callback(err, res);
+            }
+            callback && callback (null, res.data.endpoints.items);
+        }, request);
+    }
+
     getSmarthomeGroups(callback) {
-        this.httpsGet ('/api/phoenix/group?_=%t', callback);
+        this.httpsGet('/api/phoenix/group?_=%t', callback);
     }
 
     getSmarthomeEntities(callback) {
-        this.httpsGet ('/api/behaviors/entities?skillId=amzn1.ask.1p.smarthome',
+        this.httpsGet('/api/behaviors/entities?skillId=amzn1.ask.1p.smarthome',
             callback,
             {
                 headers: {
-                    'Routines-Version': '3.0.128540'
+                    'Routines-Version': '3.0.264101'
                 },
                 timeout: 30000
             }
@@ -3145,11 +3386,11 @@ class AlexaRemote extends EventEmitter {
     }
 
     getFireTVEntities(callback) {
-        this.httpsGet ('/api/behaviors/entities?skillId=amzn1.ask.1p.routines.firetv',
+        this.httpsGet('/api/behaviors/entities?skillId=amzn1.ask.1p.routines.firetv',
             callback,
             {
                 headers: {
-                    'Routines-Version': '3.0.128540'
+                    'Routines-Version': '3.0.264101'
                 },
                 timeout: 30000
             }
@@ -3157,11 +3398,11 @@ class AlexaRemote extends EventEmitter {
     }
 
     getSmarthomeBehaviourActionDefinitions(callback) {
-        this.httpsGet ('/api/behaviors/actionDefinitions?skillId=amzn1.ask.1p.smarthome',
+        this.httpsGet('/api/behaviors/actionDefinitions?skillId=amzn1.ask.1p.smarthome',
             callback,
             {
                 headers: {
-                    'Routines-Version': '3.0.128540'
+                    'Routines-Version': '3.0.264101'
                 },
                 timeout: 30000
             }
@@ -3169,11 +3410,11 @@ class AlexaRemote extends EventEmitter {
     }
 
     getRoutineSoundList(callback) {
-        this.httpsGet ('/api/behaviors/entities?skillId=amzn1.ask.1p.sound',
+        this.httpsGet('/api/behaviors/entities?skillId=amzn1.ask.1p.sound',
             callback,
             {
                 headers: {
-                    'Routines-Version': '3.0.128540'
+                    'Routines-Version': '3.0.264101'
                 },
                 timeout: 30000
             }
@@ -3191,7 +3432,7 @@ class AlexaRemote extends EventEmitter {
             deviceType: dev.deviceType,
             //deviceOwnerCustomerId: oo.deviceOwnerCustomerId
         };
-        this.httpsGet (`/api/devices-v2/device/${dev.serialNumber}`,
+        this.httpsGet(`/api/devices-v2/device/${dev.serialNumber}`,
             callback,
             {
                 method: 'PUT',
@@ -3205,7 +3446,7 @@ class AlexaRemote extends EventEmitter {
             method: 'DELETE'
             //data: JSON.stringify (o),
         };
-        this.httpsGet (`/api/phoenix/appliance/${smarthomeDevice}`, callback, flags);
+        this.httpsGet(`/api/phoenix/appliance/${smarthomeDevice}`, callback, flags);
     }
 
     setEnablementForSmarthomeDevice(smarthomeDevice, enabled, callback) {
@@ -3216,7 +3457,7 @@ class AlexaRemote extends EventEmitter {
                 'enabled': !!enabled
             }),
         };
-        this.httpsGet (`/api/phoenix/v2/appliance/${smarthomeDevice}/enablement`, callback, flags);
+        this.httpsGet(`/api/phoenix/v2/appliance/${smarthomeDevice}/enablement`, callback, flags);
     }
 
     deleteSmarthomeGroup(smarthomeGroup, callback) {
@@ -3224,7 +3465,7 @@ class AlexaRemote extends EventEmitter {
             method: 'DELETE'
             //data: JSON.stringify (o),
         };
-        this.httpsGet (`/api/phoenix/group/${smarthomeGroup}`, callback, flags);
+        this.httpsGet(`/api/phoenix/group/${smarthomeGroup}`, callback, flags);
     }
 
     deleteAllSmarthomeDevices(callback) {
@@ -3232,7 +3473,7 @@ class AlexaRemote extends EventEmitter {
             method: 'DELETE'
             //data: JSON.stringify (o),
         };
-        this.httpsGet (`/api/phoenix`, callback, flags);
+        this.httpsGet(`/api/phoenix`, callback, flags);
     }
 
     discoverSmarthomeDevice(callback) {
@@ -3240,7 +3481,7 @@ class AlexaRemote extends EventEmitter {
             method: 'POST'
             //data: JSON.stringify (o),
         };
-        this.httpsGet ('/api/phoenix/discovery', callback, flags);
+        this.httpsGet('/api/phoenix/discovery', callback, flags);
     }
 
     querySmarthomeDevices(toQuery, entityType, maxTimeout, callback) {
@@ -3276,7 +3517,7 @@ class AlexaRemote extends EventEmitter {
         };
 
 
-        this.httpsGet (`/api/phoenix/state`, callback, flags);
+        this.httpsGet(`/api/phoenix/state`, callback, flags);
         /*
         {
             'stateRequests': [
@@ -3323,7 +3564,7 @@ class AlexaRemote extends EventEmitter {
                 'controlRequests': reqArr
             })
         };
-        this.httpsGet (`/api/phoenix/state`, callback, flags);
+        this.httpsGet(`/api/phoenix/state`, callback, flags);
         /*
         {
             'controlRequests': [
@@ -3363,7 +3604,7 @@ class AlexaRemote extends EventEmitter {
                 bluetoothDeviceClass: 'OTHER'
             })
         };
-        this.httpsGet (`/api/bluetooth/unpair-sink/${dev.deviceType}/${dev.serialNumber}`, callback, flags);
+        this.httpsGet(`/api/bluetooth/unpair-sink/${dev.deviceType}/${dev.serialNumber}`, callback, flags);
     }
 
     deleteDevice(serialOrName, callback) {
@@ -3376,7 +3617,7 @@ class AlexaRemote extends EventEmitter {
                 deviceType: dev.deviceType
             })
         };
-        this.httpsGet (`/api/devices/device/${dev.serialNumber}?deviceType=${dev.deviceType}`, callback, flags);
+        this.httpsGet(`/api/devices/device/${dev.serialNumber}?deviceType=${dev.deviceType}`, callback, flags);
     }
 
     getDeviceSettings(serialOrName, settingName, callback) {
@@ -3548,7 +3789,7 @@ class AlexaRemote extends EventEmitter {
                 treble
             })
         };
-        this.httpsGet (`/api/equalizer/${dev.serialNumber}/${dev.deviceType}`, callback, flags);
+        this.httpsGet(`/api/equalizer/${dev.serialNumber}/${dev.deviceType}`, callback, flags);
     }
 
     /**
@@ -3585,7 +3826,7 @@ class AlexaRemote extends EventEmitter {
                 deviceId: dev.serialNumber
             })
         };
-        this.httpsGet (`/api/auxcontroller/${dev.deviceType}/${dev.serialNumber}/ports/${port}/setDirection`, callback, flags);
+        this.httpsGet(`/api/auxcontroller/${dev.deviceType}/${dev.serialNumber}/ports/${port}/setDirection`, callback, flags);
     }
 
     getPlayerQueue(serialOrName, size, callback) {
@@ -3597,7 +3838,7 @@ class AlexaRemote extends EventEmitter {
         if (!dev) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
 
-        this.httpsGet (`/api/np/queue?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}&size=${size}&_=%t`, callback);
+        this.httpsGet(`/api/np/queue?deviceSerialNumber=${dev.serialNumber}&deviceType=${dev.deviceType}&size=${size}&_=%t`, callback);
     }
 }
 
