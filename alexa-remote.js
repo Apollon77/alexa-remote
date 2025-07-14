@@ -1646,10 +1646,10 @@ class AlexaRemote extends EventEmitter {
                     itemAttributesToUpdate.push({ type: 'itemName', value: options.value });
                     break;
                 case 'note':
-                    /*if (options.note === null || options.note === undefined) {
-                        itemAttributesToRemove.push({ type: 'note' });
+                    if (options.note === null || options.note === undefined) {
+                        //itemAttributesToRemove.push({ type: 'note' });
                         break;
-                    }*/
+                    }
                     itemAttributesToUpdate.push({ type: 'note', value: options.note });
                     break;
                 case 'completed':
@@ -1662,10 +1662,10 @@ class AlexaRemote extends EventEmitter {
                     itemAttributesToUpdate.push({ type: 'itemStatus', value: options.itemStatus });
                     break;
                 case 'quantity':
-                    /*if (options.quantity === null || options.quantity === undefined) {
-                        itemAttributesToRemove.push({ type: 'quantity' });
+                    if (options.quantity === null || options.quantity === undefined) {
+                        //itemAttributesToRemove.push({ type: 'quantity' });
                         break;
-                    }*/
+                    }
                     itemAttributesToUpdate.push({ type: 'quantity', value: options.quantity });
                     break;
             }
