@@ -23,7 +23,8 @@ concurrency:
 
 permissions:
   id-token: write  # Required for OIDC
-  contents: read
+  contents: write
+  pull-requests: read
 
 jobs:
   # Performs quick checks before the expensive test runs
