@@ -43,6 +43,10 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
+
+### __WORK IN PROGRESS__
+* (@Apollon77) Adjusts Authentication check to recent Amazon changes
+
 ### 8.0.2 (2025-07-14)
 * (Apollon77) Fix List updates in some cases. Disable removing details for now
 

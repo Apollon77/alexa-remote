@@ -115,7 +115,6 @@ class AlexaRemote extends EventEmitter {
         this.cookie = null;
         this.csrf = null;
         this.cookieData = null;
-        this.authenticationDetails = null;
         this.ownerCustomerId = null;
         this.endpoints = null;
 
@@ -320,10 +319,6 @@ class AlexaRemote extends EventEmitter {
             );
         });
         return this;
-    }
-
-    getAuthenticationDetails() {
-        return this.authenticationDetails;
     }
 
     initNotifications(callback) {
@@ -1110,8 +1105,8 @@ class AlexaRemote extends EventEmitter {
             path = noCheck;
             noCheck = false;
         }
-        // bypass check because set or last check done before less then 10 mins
-        if (noCheck || (new Date().getTime() - this.lastAuthCheck) < 600000) {
+        // bypass check because set or last check done before less than 30 mins
+        if (noCheck || (new Date().getTime() - this.lastAuthCheck) < 1800000) {
             this._options.logger && this._options.logger(`Alexa-Remote: No authentication check needed (time elapsed ${new Date().getTime() - this.lastAuthCheck})`);
             return this.httpsGetCall(path, callback, flags);
         }
@@ -1364,13 +1359,12 @@ class AlexaRemote extends EventEmitter {
     checkAuthentication(callback) {
         // If we don't have a cookie assigned, we can't be authenticated
         if (this.cookie && this.csrf) {
-            this.httpsGetCall('/api/bootstrap?version=0',  (err, res) => {
-                if (res && res.authentication && res.authentication.authenticated !== undefined) {
-                    this.authenticationDetails = res.authentication;
-                    this.ownerCustomerId = res.authentication.customerId;
-                    return callback(res.authentication.authenticated, err);
+            this.httpsGetCall('/api/customer-status',  (err, res) => {
+                if (!err && res) {
+                    //this.ownerCustomerId = res.authentication.customerId;
+                    return callback(true, null);
                 }
-                if (err && !err.message.includes('no body')) {
+                if (err && !err.message.includes('401')) {
                     return callback(null, err);
                 }
                 callback(false, err);
@@ -2159,7 +2153,16 @@ class AlexaRemote extends EventEmitter {
     }
 
     tuneinSearchRaw(query, callback) {
-        this.httpsGet(`/api/tunein/search?query=${query}&mediaOwnerCustomerId=${this.ownerCustomerId}&_=%t`, callback);
+        if (!this.ownerCustomerId) {
+            this.getUsersMe((err, res) => {
+                if (err || !res || !res.id) return callback && callback(err, null);
+
+                this.ownerCustomerId = res.id;
+                this.tuneinSearchRaw(query, callback);
+            });
+        } else {
+            this.httpsGet(`/api/tunein/search?query=${query}&mediaOwnerCustomerId=${this.ownerCustomerId}&_=%t`, callback);
+        }
     }
 
     tuneinSearch(query, callback) {
