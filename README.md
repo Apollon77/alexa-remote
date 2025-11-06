@@ -43,7 +43,7 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
-### __WORK IN PROGRESS__
+### 8.0.4 (2025-11-06)
 * (@Apollon77) Adjusts Authentication check to recent Amazon changes
 
 ### 8.0.2 (2025-07-14)
