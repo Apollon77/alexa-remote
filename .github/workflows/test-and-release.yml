@@ -96,7 +96,7 @@ jobs:
       #        run: npm run build
       - name: Publish package to npm
         run: |
-          pm install -g npm@latest
+          npm install -g npm@latest
           npm publish ${{ steps.extract_release.outputs.TAG }}
 
       - name: Create Github Release
