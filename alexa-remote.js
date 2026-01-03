@@ -905,7 +905,86 @@ class AlexaRemote extends EventEmitter {
                 case 'PUSH_MICROPHONE_STATE':
                 case 'PUSH_DELETE_DOPPLER_ACTIVITIES':
                 case 'PUSH_DEVICE_SETUP_STATE_CHANGE':
-                case 'NotifyNowPlayingUpdated': // TODO
+                case 'NotifyNowPlayingUpdated': 
+                /*
+                {
+                    "customerId": "xxxxxxxxxxxxxx",
+                    "taskSessionId": "amzn1.echo-api.session.xxxx4c76-xxxx-4973-xxxx-991ab77fxxxx",
+                    "cause": "PLAYBACK_STARTED",
+                    "mediaId": "spotify:track:xxxxMr6RmIusYH7Kkgxxxx",
+                    "playerState": "PLAYING",
+                    "nowPlayingData": {
+                        "@class": "com.amazon.alexa.media.access.shared.model.MusicNowPlayingData",
+                        "transport": {
+                            "playPause": "ENABLED",
+                            "next": "ENABLED",
+                            "previous": "ENABLED",
+                            "shuffle": "ENABLED",
+                            "repeat": "ENABLED",
+                            "seekForward": "HIDDEN",
+                            "seekBackward": "HIDDEN",
+                            "thumbsUp": "HIDDEN",
+                            "thumbsDown": "HIDDEN"
+                        },
+                        "progress": {
+                            "visible": true,
+                            "mediaProgress": 613,
+                            "mediaLength": 199773,
+                            "allowScrubbing": true,
+                            "showTiming": true
+                        },
+                        "playerState": "PLAYING",
+                        "queueId": "spotify:playlist:xxxxdQZF1DZ06evO2fxxxx",
+                        "mediaId": "spotify:track:xxxxMr6RmIusYH7Kkgxxxx",
+                        "quality": {
+                            "name": "Default Quality",
+                            "badge": {
+                                "altText": null,
+                                "url": "",
+                                "contentType": null
+                            }
+                        },
+                        "provider": {
+                            "providerName": "Spotify",
+                            "providerLogo": {
+                                "altText": "Spotify",
+                                "url": "https://music-service-provider-logos.s3.amazonaws.com/dms-gui-logos/wordmark-logos/Spotify.png",
+                                "contentType": "image/*"
+                            }
+                        },
+                        "mainArt": {
+                            "altText": null,
+                            "contentType": "image/jpeg",
+                            "tinyUrl": "https://i.scdn.co/image/xxxx16d000048517xxxx60b64750a177449xxxx",
+                            "smallUrl": "https://i.scdn.co/image/xxxx16d000048517xxxx60b64750a177449xxxx",
+                            "mediumUrl": "https://i.scdn.co/image/xxxx16d000048517xxxx60b64750a177449xxxx",
+                            "largeUrl": "https://i.scdn.co/image/xxxx16d000048517xxxx60b64750a177449xxxx",
+                            "fullUrl": "https://i.scdn.co/image/xxxx16d000048517xxxx60b64750a177449xxxx"
+                        },
+                        "infoText": {
+                            "title": "[Song Title]",
+                            "subText1": "[Song Artist]",
+                            "subText2": "[Albumn Title]]",
+                            "multiLineMode": false
+                        },
+                        "mediaReference": {
+                            "namespace": "Alexa.Media.ExternalMediaPlayer",
+                            "name": "item",
+                            "value": "{\"contentId\":\"spotify:playlist:xxxxdQZF1DZ06evO2fxxxx\",\"externalItemId\":\"spotify:track:xxxxMr6RmIusYH7Kkgxxxx\"}"
+                        }
+                    }
+                    */
+                   const nowPlaying = payload?.update?.update?.nowPlayingData ?? null;
+                   
+                   this.emit('ws-now-playing-updated', {
+                        customerId: payload?.customerId ?? null,
+                        taskSessionId: payload?.update?.taskSessionId ?? null,
+                        cause: payload?.update?.update?.cause ?? null,
+                        mediaId: nowPlaying?.mediaId ?? null,
+                        playerState: nowPlaying?.playerState ?? null,
+                        nowPlayingData: nowPlaying
+                    });
+                    return; 
                 case 'NotifyMediaSessionsUpdated':
                     return;
 
