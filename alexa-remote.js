@@ -982,6 +982,9 @@ class AlexaRemote extends EventEmitter {
                         nowPlayingData: nowPlaying
                     });
                     return; 
+                case 'PUSH_MICROPHONE_STATE':
+                case 'PUSH_DELETE_DOPPLER_ACTIVITIES':
+                case 'PUSH_DEVICE_SETUP_STATE_CHANGE':
                 case 'NotifyMediaSessionsUpdated':
                     return;
 
