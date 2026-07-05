@@ -43,6 +43,10 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
+
+### **WORK IN PROGRESS**
+* (@fkhr79, @blabond) Fix Amazon login proxy auth flow
+
 ### 8.0.4 (2025-11-06)
 * (@Apollon77) Adjusts Authentication check to recent Amazon changes
 

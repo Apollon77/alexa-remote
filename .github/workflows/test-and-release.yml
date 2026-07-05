@@ -35,7 +35,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [24.x]
 
     steps:
       - uses: actions/checkout@v5
@@ -62,7 +62,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [24.x]
 
     steps:
       - name: Checkout code
@@ -97,7 +97,6 @@ jobs:
       #        run: npm run build
       - name: Publish package to npm
         run: |
-          npm install -g npm@latest
           npm publish ${{ steps.extract_release.outputs.TAG }}
 
       - name: Create Github Release
