@@ -43,6 +43,10 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
+
+### **WORK IN PROGRESS**
+* (@hive) Added NotifyNowPlayingUpdated event
+
 ### 8.0.6 (2026-07-06)
 * (@Apollon77) Fix Proxy URL when no static port is provided
 
