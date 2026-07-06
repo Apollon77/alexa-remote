@@ -43,6 +43,10 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
+
+### **WORK IN PROGRESS**
+* (@Apollon77) Fix Proxy URL when no static port is provided
+
 ### 8.0.5 (2026-07-05)
 * (@fkhr79, @blabond) Fix Amazon login proxy auth flow
 

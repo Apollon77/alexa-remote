@@ -29,7 +29,7 @@
     "layla.amazon.de"
   ],
   "dependencies": {
-    "alexa-cookie2": "^5.0.4",
+    "alexa-cookie2": "^5.0.5",
     "https": "^1.0.0",
     "querystring": "^0.2.1",
     "ws": "^8.21.0",
