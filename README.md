@@ -43,8 +43,7 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
-
-### **WORK IN PROGRESS**
+### 8.1.0 (2026-07-06)
 * (@hive) Added NotifyNowPlayingUpdated event
 
 ### 8.0.6 (2026-07-06)
