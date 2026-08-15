@@ -43,6 +43,10 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
+
+### __WORK IN PROGRESS__
+* (GiacomoCa) Alexa-Cookie fixes for 2FA and redirects during Logins
+
 ### 8.1.0 (2026-07-06)
 * (@hive) Added NotifyNowPlayingUpdated event
 
