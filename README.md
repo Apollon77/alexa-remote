@@ -43,8 +43,7 @@ Thank you for that work.
 * docu docu docu (sorry ... will come)
 
 ## Changelog:
-
-### __WORK IN PROGRESS__
+### 8.1.1 (2026-08-15)
 * (GiacomoCa) Alexa-Cookie fixes for 2FA and redirects during Logins
 
 ### 8.1.0 (2026-07-06)
