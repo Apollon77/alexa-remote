@@ -1142,7 +1142,7 @@ class AlexaRemote extends EventEmitter {
         this.getAuthApiBearerToken((err, res) => {
             if (err || !res || !res.access_token || res.token_type !== 'bearer') {
                 this._options.logger && this._options.logger(`Alexa-Remote: Error getting auth token: ${err ? err.message : res}`);
-                return callback && callback(err);
+                return callback && callback(err || new Error('Invalid auth token response'));
             }
             this.authApiBearerToken = res.access_token;
             this.authApiBearerExpiry = Date.now() + res.expires_in * 1000;
@@ -1240,7 +1240,11 @@ class AlexaRemote extends EventEmitter {
 
             if (err || !body) { // Method 'DELETE' may return HTTP STATUS 200 without body
                 this._options.logger && this._options.logger(`Alexa-Remote: Response: No body (code=${res && res.statusCode})`);
-                return typeof res.statusCode === 'number' && res.statusCode >= 200 && res.statusCode < 300 ? callback(null, {'success': true}) : callback(new Error('no body'), null);
+                return typeof res.statusCode === 'number' && res.statusCode >= 200 && res.statusCode < 300 ? callback(null, {'success': true}) : callback(new Error(`HTTP ${res && res.statusCode ? res.statusCode : 'request'}: no body`), null);
+            }
+
+            if (flags.checkStatus && (typeof res.statusCode !== 'number' || res.statusCode < 200 || res.statusCode >= 300)) {
+                return callback(new Error(`HTTP ${res && res.statusCode ? res.statusCode : 'request'}`), null);
             }
 
             if (flags && flags.handleAsText) {
@@ -1812,6 +1816,41 @@ class AlexaRemote extends EventEmitter {
         if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
 
         this.httpsGet(`/api/device-notification-state/${device.deviceType}/${device.softwareVersion}/${device.serialNumber}`, callback);
+    }
+
+    /**
+     * Restart an Alexa device that advertises the ALEXA_DEVICE_REBOOT capability.
+     * @param {string|object} serialOrName device serial number or account name
+     * @param {Function} callback callback receiving (error, response)
+     */
+    rebootDevice(serialOrName, callback) {
+        const device = this.find(serialOrName);
+        if (!device) return callback && callback(new Error('Unknown Device or Serial number'), null);
+        if (!device.capabilities || !device.capabilities.includes('ALEXA_DEVICE_REBOOT')) {
+            return callback && callback(new Error('Device does not support reboot'), null);
+        }
+
+        const path = `/v1/alexa/device/reboot/${device.deviceType}/${device.serialNumber}`;
+        const data = JSON.stringify({
+            deviceSerialNumber: device.serialNumber,
+            deviceType: device.deviceType,
+        });
+
+        // The reboot endpoint is an Alexa app API endpoint. It requires the
+        // short-lived bearer token in addition to the normal Alexa session.
+        this.updateApiBearerToken(err => {
+            if (err) return callback && callback(err, null);
+
+            this.httpsGet(true, `https://alexa.${this._options.amazonPage}${path}`, callback, {
+                method: 'POST',
+                headers: {
+                    authorization: `Bearer ${this.authApiBearerToken}`,
+                    'user-agent': 'AmazonWebView/AmazonAlexa/2.2.556530.0/iOS/16.6/iPhone',
+                },
+                checkStatus: true,
+                data,
+            });
+        });
     }
 
     setDeviceNotificationVolume(serialOrName, volumeLevel, callback) {
