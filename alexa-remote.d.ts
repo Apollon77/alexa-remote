@@ -587,6 +587,11 @@ declare module "alexa-remote2" {
             callback?: CallbackWithErrorAndBody
         ): void;
 
+        rebootDevice(
+            serialOrName: SerialOrName,
+            callback: CallbackWithErrorAndBody
+        ): void;
+
         getAutomationRoutines(
             limit: number,
             callback: CallbackWithErrorAndBody
