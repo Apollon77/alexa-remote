@@ -246,6 +246,20 @@ class AlexaHttp2Push extends EventEmitter {
                     this.stream && this.stream.end();
                     this.client && this.client.close();
                 });
+
+                // Session and stream errors are handled above, but an error
+                // emitted on the underlying TLS socket while the handshake is
+                // still in progress never reaches the session handlers: Node
+                // emits it on the socket itself, and by the time that delayed
+                // emission runs, the session teardown has already detached its
+                // internal socket listener. With no listener left, the error
+                // throws and kills the whole process ("Client network socket
+                // disconnected before secure TLS connection was established").
+                // Route socket errors into the normal close/retry path.
+                this.client.socket && this.client.socket.on('error', (error) => {
+                    this._options.logger && this._options.logger(`Alexa-Remote HTTP2-PUSH: Socket-Error: ${error}`);
+                    onHttp2Close(error.code, error.message);
+                });
             }
             catch (err) {
                 this._options.logger && this._options.logger(`Alexa-Remote HTTP2-PUSH: Error on Init ${err.message}`);
