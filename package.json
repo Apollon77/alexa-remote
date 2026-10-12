@@ -30,19 +30,24 @@
   ],
   "dependencies": {
     "alexa-cookie2": "^5.0.6",
-    "https": "^1.0.0",
-    "querystring": "^0.2.1",
-    "ws": "^8.21.0",
     "extend": "^3.0.2",
-    "uuid": "^11.1.1"
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^5.2.1",
-    "@alcalzone/release-script-plugin-license": "^5.2.0",
-    "eslint": "^8.57.1"
+    "@alcalzone/release-script-plugin-license": "^5.2.2",
+    "@iobroker/eslint-config": "^2.3.4",
+    "@tsconfig/node22": "^22.0.6",
+    "@types/extend": "^3.0.4",
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.2",
+    "typescript": "~6.0.3"
   },
   "scripts": {
-    "test": "node node_modules/mocha/bin/mocha",
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src",
+    "test": "npm run build && npm run test:unit",
+    "test:unit": "tsc -p test/tsconfig.json && node --test \"test/**/*.test.mts\"",
     "release": "release-script"
   },
   "repository": {
@@ -53,9 +58,13 @@
     "url": "https://github.com/Apollon77/alexa-remote/issues"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.19.0"
   },
-  "types": "alexa-remote.d.ts",
-  "main": "alexa-remote.js",
-  "readmeFilename": "readme.md"
+  "files": [
+    "build/",
+    "LICENSE"
+  ],
+  "types": "build/alexa-remote.d.ts",
+  "main": "build/alexa-remote.js",
+  "readmeFilename": "README.md"
 }

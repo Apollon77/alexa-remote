@@ -1,4 +1,4 @@
-let Alexa = require('../alexa-remote');
+let Alexa = require('../build/alexa-remote');
 let alexa = new Alexa();
 
 /***************************************************************/
