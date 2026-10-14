@@ -28,6 +28,12 @@ class AlexaHttp2Push extends EventEmitter {
     connect() {
         this.inClosing = false;
         this.update_access_token(token => {
+            if (this.stop) {
+                // The push was disconnected while the token request was in
+                // flight (e.g. a re-init called disconnect()). Do not open a
+                // connection that nothing is listening to anymore.
+                return;
+            }
             this.access_token = token;
 
             let host = 'bob-dispatch-prod-eu.amazon.com';
@@ -145,7 +151,9 @@ class AlexaHttp2Push extends EventEmitter {
                         this.stream = this.client.request(http2Options);
                     } catch (error) {
                         this._options.logger && this._options.logger(`Alexa-Remote HTTP2-PUSH: Error on Request ${error.message}`);
-                        this.emit('error', error);
+                        if (this.listenerCount('error')) {
+                            this.emit('error', error);
+                        }
                         return;
                     }
 
@@ -232,7 +240,9 @@ class AlexaHttp2Push extends EventEmitter {
 
                     this.stream.on('error', (error) => {
                         this._options.logger && this._options.logger(`Alexa-Remote HTTP2-PUSH: Stream-Error: ${error}`);
-                        this.emit('error', error);
+                        if (this.listenerCount('error')) {
+                            this.emit('error', error);
+                        }
                         this.stream && this.stream.end();
                         this.client && this.client.close();
                     });
@@ -242,15 +252,33 @@ class AlexaHttp2Push extends EventEmitter {
 
                 this.client.on('error', (error) => {
                     this._options.logger && this._options.logger(`Alexa-Remote HTTP2-PUSH: Client-Error: ${error}`);
-                    this.emit('error', error);
+                    if (this.listenerCount('error')) {
+                        this.emit('error', error);
+                    }
                     this.stream && this.stream.end();
                     this.client && this.client.close();
+                });
+
+                // Session and stream errors are handled above, but an error
+                // emitted on the underlying TLS socket while the handshake is
+                // still in progress never reaches the session handlers: Node
+                // emits it on the socket itself, and by the time that delayed
+                // emission runs, the session teardown has already detached its
+                // internal socket listener. With no listener left, the error
+                // throws and kills the whole process ("Client network socket
+                // disconnected before secure TLS connection was established").
+                // Route socket errors into the normal close/retry path.
+                this.client.socket && this.client.socket.on('error', (error) => {
+                    this._options.logger && this._options.logger(`Alexa-Remote HTTP2-PUSH: Socket-Error: ${error}`);
+                    onHttp2Close(error.code, error.message);
                 });
             }
             catch (err) {
                 this._options.logger && this._options.logger(`Alexa-Remote HTTP2-PUSH: Error on Init ${err.message}`);
                 this._options.logger && this._options.logger(err.stack);
-                this.emit('error', err);
+                if (this.listenerCount('error')) {
+                    this.emit('error', err);
+                }
                 return;
             }
             this.initTimeout && clearTimeout(this.initTimeout);
